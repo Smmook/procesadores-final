@@ -1,6 +1,6 @@
 // Operadores relacionales y de asignación, aritméticos y lógicos
-greater_than    >
-greater_equals  >=
+greater_than >
+greater_equals >=
 less_than <
 less_equals <=
 equals ==
