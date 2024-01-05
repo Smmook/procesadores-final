@@ -6,9 +6,6 @@ programa               -> void main { declaraciones instrucciones }
 declaraciones          -> declaracion-variable declaraciones |
                           ε
 
-declaracion-variable   -> tipo-vector id ; |
-                          tipo-primitivo lista-identificadores ;
-
 declaracion-variable   -> tipo-variable declaracion-variable' ;
 
 declaracion-variable'  -> [ num ] id |
@@ -80,4 +77,5 @@ termino'               -> * factor termino' |
 factor                 -> ( expresion ) |
                           variable |
                           num
+
 ```

@@ -1,0 +1,8 @@
+void main {
+    int x = 3, y = 5, a, b;
+
+    int[5] vec;
+    float[3] arr
+
+    float f,z,w = 3.4;
+}
