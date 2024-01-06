@@ -104,7 +104,53 @@ public class AnalizadorSintactico {
     }
 
     private void instruccion() {
-        // TODO: 05/01/2024 La mas gorda
+        switch (this.token.getEtiqueta()) {
+            case "boolean", "int", "float" -> {
+                declaracionVariable();
+            }
+            case "id" -> {
+                variable();
+                compara("assignment");
+                expresionLogica();
+                compara("semicolon");
+            }
+            case "if" -> {
+                compara("if");
+                compara("open_parenthesis");
+                expresionLogica();
+                compara("closed_parenthesis");
+                instruccion();
+                elseOpcional();
+            }
+            case "while" -> {
+                compara("while");
+                compara("open_parenthesis");
+                expresionLogica();
+                compara("closed_parenthesis");
+                instruccion();
+            }
+            case "do" -> {
+                compara("do");
+                instruccion();
+                compara("while");
+                compara("open_parenthesis");
+                expresionLogica();
+                compara("closed_parenthesis");
+                compara("semicolon");
+            }
+            case "print" -> {
+                compara("print");
+                compara("open_parenthesis");
+                variable();
+                compara("closed_parenthesis");
+                compara("semicolon");
+            }
+            case "open_bracket" -> {
+                compara("open_bracket");
+                instrucciones();
+                compara("closed_bracket");
+            }
+        }
     }
 
     private void elseOpcional() {
