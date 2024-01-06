@@ -15,7 +15,7 @@ public class Main {
             AnalizadorSintactico analizadorSintactico = new AnalizadorSintactico(new AnalizadorLexico(source));
             analizadorSintactico.analisis();
 
-            System.out.println("Tabla de simbolos");
+            System.out.println("\nTabla de simbolos");
             System.out.println(analizadorSintactico.tablaSimbolos());
         } catch (IOException e) {
             System.err.println(e.getMessage());

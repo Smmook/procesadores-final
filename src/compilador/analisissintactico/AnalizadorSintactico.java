@@ -57,7 +57,7 @@ public class AnalizadorSintactico {
             this.tamanoArray = Integer.parseInt(this.token.getLexema());
             this.token = this.lexico.getNextToken();
             compara("closed_square_bracket");
-            this.simbolos.put(this.token.getLexema(), tipoArray());
+            addSymbol(this.token.getLexema(), tipoArray());
             this.token = this.lexico.getNextToken();
         } else {
             listaIdentificadores();
@@ -75,8 +75,7 @@ public class AnalizadorSintactico {
 
     private void listaIdentificadores() {
         String id = this.token.getLexema();
-        this.simbolos.put(id, this.tipo);
-        // TODO: 05/01/2024 Hacer algo con el id
+        addSymbol(id ,this.tipo);
         this.token = this.lexico.getNextToken();
         asignacionDeclaracion();
         masIdentificadores();
@@ -163,6 +162,9 @@ public class AnalizadorSintactico {
     private void variable() {
         if (tipoCoincideCon("id")) {
             String id = this.token.getLexema();
+            if (!this.simbolos.containsKey(id)) {
+                System.out.println("Error en la linea " + this.lexico.getLineas() + ", identificador '" + id + "' no declarado");
+            }
             this.token = this.lexico.getNextToken();
             arrayOpcional();
         } else {
@@ -320,6 +322,15 @@ public class AnalizadorSintactico {
 
     private String tipoArray() {
         return "array (" + this.tipo + ", " + this.tamanoArray + ")";
+    }
+
+    private void addSymbol(String id, String tipo) {
+        if (this.simbolos.containsKey(id)) {
+            System.out.println("Error en la linea " + this.lexico.getLineas() + ", identificador '" + id + "' ya declarado.");
+            this.errores = true;
+        } else {
+            this.simbolos.put(id, tipo);
+        }
     }
 
     private void error(String token) {
