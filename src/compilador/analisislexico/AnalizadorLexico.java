@@ -53,12 +53,11 @@ public class AnalizadorLexico {
                 nextChar();
                 if (esElFinal()) return;
             } while (caracter != '\n');
-            lineas++;
             nextCharSignificativo();
-            return;
+            checkComment();
         }
 
-        if (caracter == '/' && checkNextChar() == '*') {
+        else if (caracter == '/' && checkNextChar() == '*') {
             do {
                 nextChar();
                 if (caracter == '\n') {
@@ -71,7 +70,9 @@ public class AnalizadorLexico {
             nextChar();
 
             nextCharSignificativo();
+            checkComment();
         }
+
     }
 
     private Token tokenNumero() {

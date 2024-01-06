@@ -54,7 +54,12 @@ public class AnalizadorSintactico {
     private void declaracionVariablePrima() {
         if (tipoCoincideCon("open_square_bracket")) {
             compara("open_square_bracket");
-            this.tamanoArray = Integer.parseInt(this.token.getLexema());
+            if (!this.token.getEtiqueta().equals("int")) {
+                error("int");
+                this.tamanoArray = 0;
+            } else {
+                this.tamanoArray = Integer.parseInt(this.token.getLexema());
+            }
             this.token = this.lexico.getNextToken();
             compara("closed_square_bracket");
             addSymbol(this.token.getLexema(), tipoArray());
@@ -76,6 +81,7 @@ public class AnalizadorSintactico {
     private void listaIdentificadores() {
         String id = this.token.getLexema();
         addSymbol(id ,this.tipo);
+//        this.tipoLeft = this.tipo;
         this.token = this.lexico.getNextToken();
         asignacionDeclaracion();
         masIdentificadores();
@@ -91,7 +97,10 @@ public class AnalizadorSintactico {
     private void asignacionDeclaracion() {
         if (tipoCoincideCon("assignment")) {
             compara("assignment");
-            expresionLogica();
+            String tipoRight = expresionLogica();
+            if (!tipoRight.equals(this.tipo)) {
+                reportError("asignando valor de tipo " + tipoRight + " a variable de tipo " + this.tipo);
+            }
         }
     }
 
@@ -108,9 +117,12 @@ public class AnalizadorSintactico {
                 declaracionVariable();
             }
             case "id" -> {
-                variable();
+                String tipoLeft = variable();
                 compara("assignment");
-                expresionLogica();
+                String tipoRight = expresionLogica();
+                if (tipoLeft != null && tipoRight != null && !tipoRight.equals(tipoLeft)) {
+                    reportError("asignando valor de tipo " + tipoRight + " a variable de tipo " + tipoLeft);
+                }
                 compara("semicolon");
             }
             case "if" -> {
@@ -159,16 +171,22 @@ public class AnalizadorSintactico {
         }
     }
 
-    private void variable() {
+    private String variable() {
         if (tipoCoincideCon("id")) {
             String id = this.token.getLexema();
+            String tipo;
             if (!this.simbolos.containsKey(id)) {
-                System.out.println("Error en la linea " + this.lexico.getLineas() + ", identificador '" + id + "' no declarado");
+                reportError("identificador '" + id + "' no declarado");
+                tipo = null;
+            } else {
+                tipo = this.simbolos.get(id);
             }
             this.token = this.lexico.getNextToken();
             arrayOpcional();
+            return tipo;
         } else {
             error("id");
+            return null;
         }
     }
 
@@ -180,60 +198,77 @@ public class AnalizadorSintactico {
         }
     }
 
-    private void expresionLogica() {
-        terminoLogico();
-        expresionLogicaPrima();
+    private String expresionLogica() {
+        String tipo = terminoLogico();
+        if (expresionLogicaPrima() == null) {
+            return tipo;
+        } else {
+            return "boolean";
+        }
     }
 
-    private void expresionLogicaPrima() {
+    private String expresionLogicaPrima() {
         if (tipoCoincideCon("or")) {
             compara("or");
             terminoLogico();
             expresionLogicaPrima();
+            return "boolean";
+        }
+        return null;
+    }
+
+    private String terminoLogico() {
+        String tipo = factorLogico();
+        if (terminoLogicoPrima() == null) {
+            return tipo;
+        } else {
+            return "boolean";
         }
     }
 
-    private void terminoLogico() {
-        factorLogico();
-        terminoLogicoPrima();
-    }
-
-    private void terminoLogicoPrima() {
+    private String terminoLogicoPrima() {
         if (tipoCoincideCon("and")) {
             compara("and");
             factorLogico();
             terminoLogicoPrima();
+            return "boolean";
         }
+        return null;
     }
 
-    private void factorLogico() {
+    private String factorLogico() {
         switch (this.token.getEtiqueta()) {
             case "not" -> {
                 compara("not");
                 factorLogico();
+                return "boolean";
             }
             case "true" -> {
                 compara("true");
+                return "boolean";
             }
             case "false" -> {
                 compara("false");
+                return "boolean";
             }
             default -> {
-                expresionRelacional();
+                return expresionRelacional();
             }
         }
     }
 
-    private void expresionRelacional() {
-        expresion();
-        operacionRelacionalOpcional();
+    private String expresionRelacional() {
+        String tipo = expresion();
+        return operacionRelacionalOpcional(tipo);
     }
 
-    private void operacionRelacionalOpcional() {
+    private String operacionRelacionalOpcional(String tipoAnterior) {
         if (tipoCoincideCon("less_than", "less_equals", "greater_than", "greater_equals", "equals", "not_equals")) {
             operadorRelacional();
             expresion();
+            return "boolean";
         }
+        return tipoAnterior;
     }
 
     private void operadorRelacional() {
@@ -248,46 +283,53 @@ public class AnalizadorSintactico {
         }
     }
 
-    private void expresion() {
-        termino();
-        expresionPrima();
+    private String expresion() {
+        String tipo = termino();
+        return expresionPrima(tipo);
     }
 
-    private void expresionPrima() {
+    private String expresionPrima(String tipoAnterior) {
         if (tipoCoincideCon("add")) {
             compara("add");
-            termino();
-            expresionPrima();
+            String tipo = termino();
+            String tipoSumado = tipoSumado(tipoAnterior, tipo);
+            return expresionPrima(tipoSumado);
         } else if (tipoCoincideCon("subtract")) {
             compara("subtract");
-            termino();
-            expresionPrima();
+            String tipo = termino();
+            String tipoSumado = tipoSumado(tipoAnterior, tipo);
+            return expresionPrima(tipoSumado);
         }
+        return tipoAnterior;
     }
 
-    private void termino() {
-        factor();
-        terminoPrima();
+    private String termino() {
+        String tipo = factor();
+        return terminoPrima(tipo);
     }
 
-    private void terminoPrima() {
+    private String terminoPrima(String tipoAnterior) {
         if (tipoCoincideCon("multiply", "divide", "remainder")) {
             this.token = this.lexico.getNextToken();
-            factor();
-            terminoPrima();
+            String tipo = factor();
+            String tipoSumado = tipoSumado(tipoAnterior, tipo);
+            return terminoPrima(tipoSumado);
         }
+        return tipoAnterior;
     }
 
-    private void factor() {
+    private String factor() {
         if (tipoCoincideCon("open_parenthesis")) {
             compara("open_parenthesis");
-            expresion();
+            String tipo = expresion();
             compara("closed_parenthesis");
+            return tipo;
         } else if (tipoCoincideCon("id")) {
-            variable();
+            return variable();
         } else {
+            String tipo = this.token.getEtiqueta();
             this.token = this.lexico.getNextToken();
-            // TODO: 05/01/2024 num
+            return tipo;
         }
     }
 
@@ -336,6 +378,32 @@ public class AnalizadorSintactico {
     private void error(String token) {
         System.out.println("Error en linea " + this.lexico.getLineas() + ". Expected " + token + ", Found " + this.token.getEtiqueta());
         this.errores = true;
+    }
+
+    private void reportError(String msg) {
+        System.out.println("Error en linea " + this.lexico.getLineas() + ", " + msg);
+        this.errores = true;
+    }
+
+    private String tipoSumado(String tipo1, String tipo2) {
+        if (tipo1 == null) {
+            return tipo2;
+        }
+        if (tipo2 == null) {
+            return tipo1;
+        }
+
+        if (tipo1.equals("int") && tipo2.equals("int")) {
+            return "int";
+        } else if (tipo1.equals("float") && tipo2.equals("float")) {
+            return "float";
+        } else if (tipo1.equals("int") && tipo2.equals("float")) {
+            return "float";
+        } else if (tipo1.equals("float") && tipo2.equals("int")) {
+            return "float";
+        } else {
+            return "error";
+        }
     }
 
 }
