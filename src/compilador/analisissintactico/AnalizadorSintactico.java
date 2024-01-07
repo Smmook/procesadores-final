@@ -287,10 +287,12 @@ public class AnalizadorSintactico {
             }
             case "true" -> {
                 compara("true");
+                pila.push("true");
                 return "boolean";
             }
             case "false" -> {
                 compara("false");
+                pila.push("false");
                 return "boolean";
             }
             default -> {
@@ -375,11 +377,15 @@ public class AnalizadorSintactico {
         } else if (tipoCoincideCon("id")) {
             pila.rvalue(this.token.getLexema());
             return variable();
-        } else {
+        } else if (tipoCoincideCon("int", "float")) {
             String tipo = this.token.getEtiqueta();
             pila.push(this.token.getLexema());
             this.token = this.lexico.getNextToken();
             return tipo;
+        } else {
+            reportError("Expected number, id or expression, found " + this.token.getEtiqueta());
+            this.token = this.lexico.getNextToken();
+            return null;
         }
     }
 

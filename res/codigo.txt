@@ -1,43 +1,21 @@
-lvalue si
-push 0
-=
-lvalue sp
-push 0
-=
-lvalue i
-push 1
+lvalue x
+push 3
 =
 label_0:
-rvalue i
-push 10
-<=
-gofalse label_1
-rvalue i
-push 2
-%
-push 0
+lvalue corecto
+push true
+=
+rvalue corecto
+rvalue x
 ==
-gofalse label_2
-lvalue si
-rvalue si
-rvalue i
-+
-=
-goto label_3
-label_2:
-lvalue sp
-rvalue sp
-rvalue i
-+
-=
-label_3:
-lvalue i
-rvalue i
-push 1
-+
-=
-goto label_0
+gofalse label_1
+print corecto
+goto label_2
 label_1:
-print si
-print sp
+print x
+label_2:
+rvalue corecto
+rvalue x
+==
+gotrue 0
 halt

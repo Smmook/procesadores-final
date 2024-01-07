@@ -1,16 +1,16 @@
 void main {
-    int si = 0, sp = 0, no;
-    int i = 1;
+    int x = 3;
 
-    while (i <= 10) {
-        if (i % 2 == 0) {
-            si = si + i;
-        } else {
-            sp = sp + i;
-        }
-        i = i + 1;
-    }
+    do {
+        boolean corecto = true;
 
-    print(si);
-    print(sp);
+        if (corecto == x)
+            print(corecto);
+        else
+            print(x);
+
+
+    } while (corecto == x);
+
+
 }
