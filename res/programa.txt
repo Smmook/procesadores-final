@@ -1,15 +1,16 @@
 void main {
-    int a = 1;
-    int b = 2;
-    boolean c = true;
-    int d = 0;
+    int si = 0, sp = 0, no;
+    int i = 1;
 
-    boolean e = a + b >= d;
-
-    if (e) {
-        print(c);
-    } else {
-        print(a);
+    while (i <= 10) {
+        if (i % 2 == 0) {
+            si = si + i;
+        } else {
+            sp = sp + i;
+        }
+        i = i + 1;
     }
 
+    print(si);
+    print(sp);
 }

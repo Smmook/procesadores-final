@@ -17,6 +17,9 @@ public class Main {
 
             System.out.println("\nTabla de simbolos");
             System.out.println(analizadorSintactico.tablaSimbolos());
+
+//            System.out.println("\nCodigo intermedio");
+//            System.out.println(analizadorSintactico.maquinaPila());
         } catch (IOException e) {
             System.err.println(e.getMessage());
         }
