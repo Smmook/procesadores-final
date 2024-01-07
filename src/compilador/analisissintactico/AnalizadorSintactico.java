@@ -326,10 +326,14 @@ public class AnalizadorSintactico {
             return tipo;
         } else if (tipoCoincideCon("id")) {
             return variable();
-        } else {
+        } else if (tipoCoincideCon("int", "float")){
             String tipo = this.token.getEtiqueta();
             this.token = this.lexico.getNextToken();
             return tipo;
+        } else {
+            reportError("Expected number, id or expression, found " + this.token.getEtiqueta());
+            this.token = this.lexico.getNextToken();
+            return null;
         }
     }
 
