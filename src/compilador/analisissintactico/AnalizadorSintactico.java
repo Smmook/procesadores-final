@@ -459,7 +459,7 @@ public class AnalizadorSintactico {
     private void codigoIntermedio() {
         String codigo = this.pila.toString();
         try {
-            Files.writeString(Path.of("codigo/codigo.txt"), codigo);
+            Files.writeString(Path.of("res/codigo.txt"), codigo);
         } catch (IOException e) {
             System.err.println("Error al crear archivo de codigo intermedio: " + e.getMessage());
         }
