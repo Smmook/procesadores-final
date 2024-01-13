@@ -377,7 +377,9 @@ public class AnalizadorSintactico {
         } else if (tipoCoincideCon("id")) {
             pila.rvalue(this.token.getLexema());
             return variable();
+
         } else if (tipoCoincideCon("int", "float")) {
+
             String tipo = this.token.getEtiqueta();
             pila.push(this.token.getLexema());
             this.token = this.lexico.getNextToken();
