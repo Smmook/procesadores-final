@@ -3,9 +3,13 @@ package compilador.analisissintactico;
 import compilador.analisislexico.AnalizadorLexico;
 import compilador.analisislexico.Token;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 public class AnalizadorSintactico {
     private AnalizadorLexico lexico;
@@ -14,18 +18,28 @@ public class AnalizadorSintactico {
     private String tipo;
     private int tamanoArray;
     private boolean errores;
+    private final MaquinaPila pila;
+    private boolean soloPrimitivos;
 
     public AnalizadorSintactico(AnalizadorLexico lexico) {
         this.lexico = lexico;
         this.token = this.lexico.getNextToken();
         this.simbolos = new Hashtable<>();
         this.errores = false;
+        this.pila = new MaquinaPila();
+        this.soloPrimitivos = true;
     }
 
     public void analisis() {
         programa();
         if (!errores) {
             System.out.println("Programa compilado correctamente");
+
+            if (this.soloPrimitivos) {
+                codigoIntermedio();
+            } else {
+                System.out.println("No se ha generado codigo intermedio ya que el programa contiene tipos no primitivos.");
+            }
         }
     }
 
@@ -36,6 +50,7 @@ public class AnalizadorSintactico {
         declaraciones();
         instrucciones();
         compara("closed_bracket");
+        pila.halt();
     }
 
     private void declaraciones() {
@@ -53,6 +68,7 @@ public class AnalizadorSintactico {
 
     private void declaracionVariablePrima() {
         if (tipoCoincideCon("open_square_bracket")) {
+            this.soloPrimitivos = false;    // Hay arrays
             compara("open_square_bracket");
             if (!this.token.getEtiqueta().equals("int")) {
                 error("int");
@@ -81,9 +97,9 @@ public class AnalizadorSintactico {
     private void listaIdentificadores() {
         String id = this.token.getLexema();
         addSymbol(id ,this.tipo);
-//        this.tipoLeft = this.tipo;
         this.token = this.lexico.getNextToken();
-        asignacionDeclaracion();
+
+        asignacionDeclaracion(id);
         masIdentificadores();
     }
 
@@ -94,10 +110,12 @@ public class AnalizadorSintactico {
         }
     }
 
-    private void asignacionDeclaracion() {
+    private void asignacionDeclaracion(String id) {
         if (tipoCoincideCon("assignment")) {
+            pila.lvalue(id);
             compara("assignment");
             String tipoRight = expresionLogica();
+            pila.operator("=");
             if (!tipoRight.equals(this.tipo)) {
                 reportError("asignando valor de tipo " + tipoRight + " a variable de tipo " + this.tipo);
             }
@@ -117,9 +135,11 @@ public class AnalizadorSintactico {
                 declaracionVariable();
             }
             case "id" -> {
+                pila.lvalue(this.token.getLexema());
                 String tipoLeft = variable();
                 compara("assignment");
                 String tipoRight = expresionLogica();
+                pila.operator("=");
                 if (tipoLeft != null && tipoRight != null && !tipoRight.equals(tipoLeft)) {
                     reportError("asignando valor de tipo " + tipoRight + " a variable de tipo " + tipoLeft);
                 }
@@ -130,28 +150,41 @@ public class AnalizadorSintactico {
                 compara("open_parenthesis");
                 expresionLogica();
                 compara("closed_parenthesis");
+
+                int label1 = pila.lastLabel() + 1;
+                pila.gofalse(label1);
+
                 instruccion();
-                elseOpcional();
+                elseOpcional(label1);
             }
             case "while" -> {
+                int label = pila.lastLabel() + 1;
+                pila.label(label);
                 compara("while");
                 compara("open_parenthesis");
                 expresionLogica();
                 compara("closed_parenthesis");
+                pila.gofalse(label + 1);
                 instruccion();
+                pila.goto_(label);
+                pila.label(label + 1);
             }
             case "do" -> {
+                int label = pila.lastLabel() + 1;
+                pila.label(label);
                 compara("do");
                 instruccion();
                 compara("while");
                 compara("open_parenthesis");
                 expresionLogica();
                 compara("closed_parenthesis");
+                pila.gotrue(label);
                 compara("semicolon");
             }
             case "print" -> {
                 compara("print");
                 compara("open_parenthesis");
+                pila.print(this.token.getLexema());
                 variable();
                 compara("closed_parenthesis");
                 compara("semicolon");
@@ -164,10 +197,16 @@ public class AnalizadorSintactico {
         }
     }
 
-    private void elseOpcional() {
+    private void elseOpcional(int label) {
         if (tipoCoincideCon("else")) {
+            int label2 = pila.lastLabel() + 1;
+            pila.goto_(label2);
             compara("else");
+            pila.label(label);
             instruccion();
+            pila.label(label2);
+        } else {
+            pila.label(label);
         }
     }
 
@@ -212,6 +251,7 @@ public class AnalizadorSintactico {
             compara("or");
             terminoLogico();
             expresionLogicaPrima();
+            pila.operator("||");
             return "boolean";
         }
         return null;
@@ -231,6 +271,7 @@ public class AnalizadorSintactico {
             compara("and");
             factorLogico();
             terminoLogicoPrima();
+            pila.operator("&&");
             return "boolean";
         }
         return null;
@@ -241,14 +282,17 @@ public class AnalizadorSintactico {
             case "not" -> {
                 compara("not");
                 factorLogico();
+                pila.operator("!");
                 return "boolean";
             }
             case "true" -> {
                 compara("true");
+                pila.push("true");
                 return "boolean";
             }
             case "false" -> {
                 compara("false");
+                pila.push("false");
                 return "boolean";
             }
             default -> {
@@ -264,8 +308,10 @@ public class AnalizadorSintactico {
 
     private String operacionRelacionalOpcional(String tipoAnterior) {
         if (tipoCoincideCon("less_than", "less_equals", "greater_than", "greater_equals", "equals", "not_equals")) {
+            String op = this.token.getLexema();
             operadorRelacional();
             expresion();
+            pila.operator(op);
             return "boolean";
         }
         return tipoAnterior;
@@ -292,11 +338,13 @@ public class AnalizadorSintactico {
         if (tipoCoincideCon("add")) {
             compara("add");
             String tipo = termino();
+            pila.operator("+");
             String tipoSumado = tipoSumado(tipoAnterior, tipo);
             return expresionPrima(tipoSumado);
         } else if (tipoCoincideCon("subtract")) {
             compara("subtract");
             String tipo = termino();
+            pila.operator("-");
             String tipoSumado = tipoSumado(tipoAnterior, tipo);
             return expresionPrima(tipoSumado);
         }
@@ -310,8 +358,10 @@ public class AnalizadorSintactico {
 
     private String terminoPrima(String tipoAnterior) {
         if (tipoCoincideCon("multiply", "divide", "remainder")) {
+            String op = this.token.getLexema();
             this.token = this.lexico.getNextToken();
             String tipo = factor();
+            pila.operator(op);
             String tipoSumado = tipoSumado(tipoAnterior, tipo);
             return terminoPrima(tipoSumado);
         }
@@ -325,9 +375,13 @@ public class AnalizadorSintactico {
             compara("closed_parenthesis");
             return tipo;
         } else if (tipoCoincideCon("id")) {
+            pila.rvalue(this.token.getLexema());
             return variable();
-        } else if (tipoCoincideCon("int", "float")){
+
+        } else if (tipoCoincideCon("int", "float")) {
+
             String tipo = this.token.getEtiqueta();
+            pila.push(this.token.getLexema());
             this.token = this.lexico.getNextToken();
             return tipo;
         } else {
@@ -407,6 +461,15 @@ public class AnalizadorSintactico {
             return "float";
         } else {
             return "error";
+        }
+    }
+
+    private void codigoIntermedio() {
+        String codigo = this.pila.toString();
+        try {
+            Files.writeString(Path.of("res/codigo.txt"), codigo);
+        } catch (IOException e) {
+            System.err.println("Error al crear archivo de codigo intermedio: " + e.getMessage());
         }
     }
 

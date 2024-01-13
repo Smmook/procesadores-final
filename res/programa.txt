@@ -1,15 +1,16 @@
 void main {
-    int a = 1;
-    int b = 2;
-    boolean c = true;
-    int d = 0;
+    int x = 3;
 
-    boolean e = a + b >= d;
+    do {
+        boolean corecto = true;
 
-    if (e) {
-        print(c);
-    } else {
-        print(a);
-    }
+        if (corecto == x)
+            print(corecto);
+        else
+            print(x);
+
+
+    } while (corecto == x);
+
 
 }
